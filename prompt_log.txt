@@ -1,6 +1,1233 @@
-## Student Name:
-## Student ID: 
+## Student Name: Dexter Sargent
+## Student ID: 217931460
 
-Prompt #1: {}
-Response #1: {}
+Prompt #1: {Problem Summary:
+The objective is to implement a Python module that recommends the next N available, chronologically ordered appointment slots within a specified working window. The system must intelligently navigate constraints such as existing busy intervals, required meeting durations, optional buffer times, and candidate time windows to provide deterministic and valid suggestions.
+
+Functional Requirements:
+The system must accept and adhere to a defined working window consisting of a specific start and end time
+The system must accept a list of existing busy intervals and ensure that no recommended slots overlap with these periods
+The system must correctly process busy intervals even if they are provided in an unsorted order or contain overlapping time frames.
+The system must accept a required meeting duration and ensure all returned slots are at least as long as that duration.
+The system must accept an optional buffer time and respect this gap when evaluating availability between meetings and busy intervals.
+The system must provide the option to restrict suggested slots to a specific candidate time window that exists within the broader working hours.
+The system must return valid appointment suggestions in strict chronological order.
+The system must return no more than n valid suggestions based on the user-specified limit.
+The system must produce the same output every time it receives identical inputs.
+The system must return an empty list if there is no availability within the working window.
+
+Constraints and Invariants:
+The system must accept working hours (start and end time)
+The system must accept a list of existing busy intervals.
+The system must accept a meeting duration.
+The system must accept an optional buffer time between meetings
+The system must optionally restrict suggestions to a candidate time window.
+The system must return chronologically ordered appointment slots that satisfy all constraints.
+
+Every returned appointment slot must have a length that is at least as long as the required duration specified in the input.
+No returned appointment slot may violate the defined buffer constraints.
+The returned list of suggested slots must accurately reflect the current state of the system.
+
+The system must not suggest any appointment slot that overlaps with any interval defined in the list of busy periods.
+The system must not return any appointment suggestion that begins before or ends after the strictly defined working hours
+
+Tie breakers will be determined by start_time, with the earlier start_time being prioritized.
+
+candidateWindow must fall within working_hours
+Standard exceptions for invalid inputs should be raised
+timeDelta objects must not accept negative values.
+duration should not exceed the TimeWindow for working_hours
+All suggested appointment slots must fall entirely within the defined working_hours start and end times
+Suggested slots must not overlap with any provided busy_intervals.
+For all TimeWindow objects, the start time must be before the end time
+
+Acceptance Criteria:
+AC1: Validate Working Hours Boundary
+
+Given: A working window from 09:00 to 12:00.
+
+When: A 30-minute meeting is requested with no busy intervals.
+
+Then: All returned slots must have a start_time after 09:00 and end_time begore 12:00. These slots must be sorted chronologically.
+
+Linked Constraint ID(s): 1, 6
+
+
+
+
+AC2: Avoidance of Busy Intervals
+
+Given: A busy interval exists from 10:00 to 11:00..
+
+When: A 30-minute meeting is requested with a working window from 09:00 to 17:00.
+
+Then: No returned slot start_time may fall between 09:31 and 10:59. These slots must be sorted chronologically.
+
+Linked Constraint ID(s): 2, 6
+
+
+AC3: Handling Insufficient Availability
+
+Given: A working window of 09:00 to 10:00.
+
+When: A 90-minute meeting is requested with no busy intervals.
+
+Then: An empty list must be returned.
+
+Linked Constraint ID(s): 3
+
+
+AC4: Respect Optional Buffer Time
+
+Given: A busy interval ends at 10:00, and a 10-minute buffer is required.
+
+When: A 30-minute meeting is requested.
+
+Then: The earliest available slot following that busy interval must have a start_time after 10:10. These slots must be sorted chronologically.
+
+Linked Constraint ID(s): 4, 6
+
+
+AC5: Restriction to Candidate Window
+
+Given: Working hours are 09:00 to 17:00, but a candidate window is set for 13:00 to 15:00.
+
+When: Suggestions are requested.
+
+Then: All returned slots must have a start_time after 13:00 and an end_time before 15:00. These slots must be sorted chronologically.
+
+Linked Constraint ID(s): 1, 5, 6
+
+
+AC6: Chronological and Deterministic Output
+
+Given: Multiple valid gaps exist at 09:00, 11:00, and 14:00.
+
+When: n=2 suggestions are requested twice with identical inputs.
+
+Then: Should return the gaps at 9:00 and 11:00 both times, excluding 14:00.
+
+Linked Constraint ID(s): 6
+
+
+
+AC7: No suggestions requested
+
+Given: Multiple valid gaps exist at 09:00, 11:00, and 14:00.
+
+When: n=0 suggestions are requested.
+
+Then: Should return the gaps at 9:00 and 11:00 both times, excluding 14:00.
+
+Linked Constraint ID(s): 6
+
+Edge Cases:
+EC1: Zero Available Slots 
+Description: The system must handle cases where constraints (busy intervals or buffers) leave no gaps large enough to fit the requested duration.
+
+Linked Constraint ID(s): 3
+
+Covered by Acceptance Criteria ID(s): AC3.
+
+
+
+EC2: n = 0 
+
+Description: When the user requests a maximum of zero suggestions, the system should return an empty list without error.
+
+Linked Constraint ID(s): 6
+
+Covered by Acceptance Criteria ID(s): AC6.
+
+
+
+EC3: Adjacent Busy Intervals 
+
+Description: Two busy intervals occur back-to-back (i.e., 09:00–10:00 and 10:00–11:00); the system must correctly identify that no slot can start at 10:00
+
+Linked Constraint ID(s): 2, 6
+
+Covered by Acceptance Criteria ID(s): AC2.
+
+
+
+EC4: Buffer Eliminating Valid Availability
+
+Description: A gap exists that is exactly equal to the duration, but the addition of a required buffer makes the gap insufficient
+
+Linked Constraint ID(s): 3, 4, 6
+
+Covered by Acceptance Criteria ID(s): AC4.
+
+
+
+EC5: Overlapping or Unsorted Busy Intervals
+
+Description: The list of busy intervals is provided out of chronological order or contains overlapping time frames; the system must normalize these to find true availability.
+
+Linked Constraint ID(s): 2, 6
+
+Covered by Acceptance Criteria ID(s): AC2.
+
+
+
+EC6: Candidate Window Outside Working Hours
+
+Description: The optional candidate window is set for a time range that does not overlap with the primary working hours.
+
+Linked Constraint ID(s): 1, 5, 6
+
+Covered by Acceptance Criteria ID(s): AC5.
+
+Before generating any code, please analyze these requirements and identify if any ambiguities or missing clarifications exist. If none exist, confirm your understanding of the deterministic requirements and logic.}
+Response #1: {Your requirements are generally very clear and well-structured, but there are a **few ambiguities and inconsistencies** that should be clarified before implementation to ensure deterministic behavior and correct testing. I'll break them down.
+
+---
+
+# 1. Ambiguity: What Exactly Is Returned?
+
+You state:
+
+> “recommend the next N available appointment slots”
+
+But you **never define the slot size beyond the minimum duration**.
+
+Possible interpretations:
+
+1. **Return the entire available gap**
+
+   * Example: gap 09:00–10:00 with 30-minute meeting
+   * Return: **09:00–10:00**
+
+2. **Return a slot exactly equal to the duration**
+
+   * Example: gap 09:00–10:00 with 30-minute meeting
+   * Return: **09:00–09:30**
+
+3. **Return multiple slots inside the gap**
+
+   * Example: gap 09:00–10:00
+   * Duration 30 min
+   * Return:
+
+     * 09:00–09:30
+     * 09:30–10:00
+
+Your AC examples imply **option #2 (slot = duration)** but it is **never explicitly stated**.
+
+### Recommended Clarification
+
+Specify:
+
+> Each suggested slot must have a duration **exactly equal to the requested meeting duration**.
+
+or
+
+> Each suggested slot must have a duration **≥ meeting duration** and the system returns the **entire available window**.
+
+---
+
+# 2. Ambiguity: Slot Granularity
+
+You never define **time resolution**.
+
+Example:
+
+Working window
+09:00–10:00
+
+Duration
+30 minutes
+
+Valid slots could be:
+
+* 09:00–09:30
+* 09:01–09:31
+* 09:02–09:32
+* ...
+
+Without a **time increment rule**, infinite possibilities exist.
+
+### Recommended Clarification
+
+Define one:
+
+Option A (common):
+
+> Slots start at the **earliest valid boundary after the previous interval**.
+
+Option B:
+
+> Slots advance in **duration-sized increments**.
+
+Option C:
+
+> Slots advance in **1-minute increments**.
+
+Without this rule the algorithm is not deterministic.
+
+---
+
+# 3. Inconsistency: AC7 vs EC2
+
+AC7 says:
+
+> When n = 0 suggestions are requested
+> Then return the gaps at 9:00 and 11:00
+
+But EC2 says:
+
+> When n = 0 → return an empty list.
+
+These conflict.
+
+### Correct behavior should be:
+
+If `n = 0`
+
+```
+return []
+```
+
+So **AC7 is incorrect**.
+
+---
+
+# 4. Ambiguity: Buffer Application
+
+The requirement:
+
+> optional buffer time between meetings
+
+But **where exactly is the buffer applied?**
+
+Possible interpretations:
+
+### Interpretation A (most common)
+
+Buffer required **before and after busy intervals**
+
+Meaning:
+
+```
+[busy_start - buffer, busy_end + buffer]
+```
+
+### Interpretation B
+
+Buffer required **only after meetings**
+
+Meaning:
+
+```
+busy_end + buffer
+```
+
+AC4 implies:
+
+> busy ends at 10:00
+> buffer 10 minutes
+> earliest slot after 10:10
+
+So this suggests **buffer after busy intervals**, but it does **not clarify buffer before them**.
+
+### Needed clarification
+
+Is buffer applied:
+
+1️⃣ After busy intervals only
+2️⃣ Before and after busy intervals
+3️⃣ Between suggested meetings only
+
+---
+
+# 5. Ambiguity: Candidate Window Handling
+
+You say:
+
+> candidateWindow must fall within working_hours
+
+But EC6 says:
+
+> Candidate window outside working hours.
+
+So what should happen?
+
+Two possibilities:
+
+### Option A
+
+Raise exception
+
+### Option B
+
+Return empty list
+
+Because your requirements say:
+
+> Standard exceptions for invalid inputs should be raised
+
+This suggests **exception**.
+
+---
+
+# 6. Ambiguity: Busy Interval Boundaries
+
+Consider:
+
+```
+Busy: 10:00–11:00
+Meeting duration: 30
+```
+
+Is **11:00–11:30** allowed?
+
+Most scheduling systems treat intervals as:
+
+```
+[start, end)
+```
+
+Meaning:
+
+* start inclusive
+* end exclusive
+
+So **11:00 start is valid**.
+
+But this should be specified.
+
+---
+
+# 7. Ambiguity: Buffer Interaction with Working Hours
+
+Example:
+
+```
+Working hours: 09:00–12:00
+Busy: 09:00–10:00
+Buffer: 30
+```
+
+Do we allow:
+
+```
+10:30–11:00
+```
+
+Or should the busy interval expand to:
+
+```
+08:30–10:30
+```
+
+And then intersect with working hours?
+
+---
+
+# 8. Missing Validation Rules
+
+You listed some validation rules, but a few are missing.
+
+These should be clarified.
+
+### Missing checks
+
+#### Busy interval validity
+
+Each busy interval must satisfy:
+
+```
+start < end
+```
+
+#### Busy interval within working hours?
+
+Should we:
+
+1️⃣ allow busy intervals outside working hours
+2️⃣ trim them
+3️⃣ raise exception
+
+Most systems **clip them to working hours**.
+
+---
+
+# 9. Ambiguity: Maximum Slot Generation
+
+If a large gap exists:
+
+```
+09:00–17:00
+duration: 30
+n=3
+```
+
+Should the system return:
+
+Option A:
+
+```
+09:00
+09:30
+10:00
+```
+
+Option B:
+
+```
+09:00
+10:00
+11:00
+```
+
+Option C:
+
+Only first start per gap
+
+```
+09:00
+```
+
+Your requirements **do not define how many slots per gap are generated**.
+
+---
+
+# 10. Minor Issue: AC2 Logic
+
+AC2 says:
+
+> No returned slot start_time may fall between 09:31 and 10:59
+
+But busy interval was:
+
+```
+10:00–11:00
+```
+
+If meeting duration = 30 minutes
+
+Then **09:30–10:00 is valid**.
+
+So AC2 appears incorrect.
+
+---
+
+# Deterministic Algorithm Understanding
+
+Assuming the **most likely intended behavior**, the system should:
+
+### Step 1
+
+Validate inputs
+
+* start < end
+* duration > 0
+* buffer ≥ 0
+* candidate window within working hours
+
+---
+
+### Step 2
+
+Normalize busy intervals
+
+1. Sort
+2. Merge overlaps
+
+---
+
+### Step 3
+
+Expand busy intervals by buffer
+
+```
+start - buffer
+end + buffer
+```
+
+---
+
+### Step 4
+
+Clamp intervals to working hours
+
+---
+
+### Step 5
+
+Find free gaps
+
+```
+working_start → first_busy_start
+busy_end → next_busy_start
+last_busy_end → working_end
+```
+
+---
+
+### Step 6
+
+Generate slots
+
+Within each gap generate slots that:
+
+```
+slot_start >= gap_start
+slot_end = slot_start + duration
+slot_end <= gap_end
+```
+
+Slots must be:
+
+* chronological
+* deterministic
+
+---
+
+### Step 7
+
+Apply candidate window filter
+
+Intersect with candidate window.
+
+---
+
+### Step 8
+
+Return first `n` slots.
+
+---
+
+# Summary of Required Clarifications
+
+Before coding, I recommend clarifying:
+
+1️⃣ Slot duration (exact vs entire gap)
+2️⃣ Slot granularity (1 min vs duration step)
+3️⃣ AC7 contradiction with EC2
+4️⃣ Buffer application rules
+5️⃣ Candidate window outside working hours (exception?)
+6️⃣ Busy interval boundary inclusivity
+7️⃣ Busy intervals outside working hours behavior
+8️⃣ Multiple slots per gap rule
+9️⃣ AC2 example correctness
+
+---
+
+✅ **Overall:**
+Your requirements are **very strong and almost implementation-ready**, but these clarifications are necessary to guarantee **deterministic behavior and testability**.
+
+---
+
+If you'd like, I can also show you the **clean deterministic algorithm that professors expect for this assignment** (it's about **25 lines of Python logic**) once these ambiguities are resolved.
+}
+--------------------------------------------------
+
+Prompt #2: {Clarifying each issue systematically before proceeding:
+1. slot length=duration
+2. To ensure a deterministic algorithm, slots should start at the earliest valid boundary after the previous interval
+3. The correct behavior is defined by EC2; if n = 0, the system must return an empty list. AC7 is meant to reflect this
+4. The buffer is applied before and after busy intervals
+5. If the candidate window falls outside working hours, the system should return an error
+6.  The system treats intervals as [start, end) (start inclusive, end exclusive); therefore, a meeting can start exactly when a busy interval ends
+7. Buffers should be applied to busy intervals first, then the resulting unavailable blocks are clamped/intersected with the working hours.
+8. the system must enforce the invariant start < end for all busy intervals. Intervals outside working hours should be clipped to the working window.
+9. If a large gap exists, the system should return multiple slots within that gap until n is reached or the gap is exhausted.
+10. The start time you gave is before 9:31, therefore not applicable.
+
+Any further confusion?
+
+}
+Response #2: {Your clarifications resolve **almost all of the ambiguities**. The specification is now **very close to fully deterministic**. There are only **two small remaining points** worth clarifying to avoid implementation or testing inconsistencies.
+
+---
+
+# 1. Slot Advancement Rule (Minor Clarification)
+
+You said:
+
+> slots should start at the earliest valid boundary after the previous interval
+
+This is mostly clear, but we should make the rule **explicitly algorithmic** to avoid interpretation differences.
+
+For example, consider:
+
+```
+Gap: 09:00–11:00
+Duration: 30 minutes
+```
+
+Two interpretations could exist:
+
+### Interpretation A (most likely intended)
+
+After scheduling a slot, the **next slot begins immediately after the previous slot ends**.
+
+Slots generated:
+
+```
+09:00–09:30
+09:30–10:00
+10:00–10:30
+10:30–11:00
+```
+
+### Interpretation B
+
+Each slot is recomputed as:
+
+```
+gap_start + duration
+gap_start + duration + duration
+...
+```
+
+These are **effectively the same**, but writing the rule clearly prevents confusion.
+
+Recommended clarification:
+
+> After a slot is generated, the next candidate start time is the **end time of the previous slot**.
+
+---
+
+# 2. Candidate Window Processing Order
+
+You clarified:
+
+> candidate window must fall within working_hours
+
+But the **order of operations** should be confirmed.
+
+Two possible implementations exist.
+
+### Option A (simplest)
+
+Treat the candidate window as a **temporary working window override**.
+
+```
+effective_window =
+    intersection(working_hours, candidate_window)
+```
+
+Then run the scheduling algorithm **only inside that window**.
+
+### Option B
+
+Generate slots for the entire working window, then filter them by candidate window.
+
+Both produce the same result **most of the time**, but **Option A is cleaner and deterministic**.
+
+Recommended clarification:
+
+> If a candidate window is provided, the system computes availability only within the intersection of the working window and the candidate window.
+
+---
+
+# Deterministic Logic (Now Fully Defined)
+
+With your clarifications, the algorithm becomes:
+
+### Step 1 — Validate Inputs
+
+Check:
+
+* `start < end` for all `TimeWindow`
+* `duration > 0`
+* `buffer >= 0`
+* `duration <= working_hours`
+* `candidateWindow ⊆ working_hours`
+* `n >= 0`
+
+Return `[]` immediately if `n == 0`.
+
+---
+
+### Step 2 — Normalize Busy Intervals
+
+1. Validate `start < end`
+2. Clip intervals to working hours
+3. Sort by start
+4. Merge overlaps
+
+---
+
+### Step 3 — Apply Buffer
+
+For each busy interval:
+
+```
+[start - buffer, end + buffer]
+```
+
+---
+
+### Step 4 — Clamp Buffered Intervals to Working Hours
+
+```
+max(start, working_start)
+min(end, working_end)
+```
+
+Then **merge again** if buffers caused overlaps.
+
+---
+
+### Step 5 — Compute Free Gaps
+
+Between:
+
+```
+working_start → first_busy
+busy_i_end → busy_(i+1)_start
+last_busy_end → working_end
+```
+
+---
+
+### Step 6 — Generate Slots
+
+For each gap:
+
+```
+slot_start = gap_start
+
+while slot_start + duration <= gap_end:
+    add slot
+    slot_start += duration
+```
+
+Stop when:
+
+```
+len(slots) == n
+```
+
+---
+
+### Step 7 — Return Chronologically Sorted Slots
+
+Slots are naturally sorted due to algorithm order.
+
+---
+
+# Final Verdict
+
+Your spec is now:
+
+✅ Deterministic
+✅ Testable
+✅ Implementation-ready
+✅ Covers edge cases well
+✅ Covers normalization and invariants
+
+The only improvements I'd suggest adding to the document are the **two small clarifications above**, but they are **implementation details rather than requirement gaps**.
+
+---
+
+If you'd like, I can also next show you:
+
+**The cleanest Python implementation of this algorithm (about 35 lines)** that will pass a strict `pytest` test suite.
+}
+--------------------------------------------------
+
+Prompt #3: {Alright, here is the incomplete code, please output the full file with a complete implementation adhering to all specifications discussed above:
+
+## Student Name:
+## Student ID:
+
+"""
+Task A: Appointment Timeslot Recommender (Stub)
+
+In this lab, you will design and implement an Appointment Slot Recommender using an LLM assistant
+as your primary programming collaborator.
+
+You are asked to implement a Python module that recommends available meeting slots within a
+defined working window.
+
+The system must:
+  • Accept working hours (start and end time).
+  • Accept a list of existing busy intervals.
+  • Accept a required meeting duration.
+  • Accept an optional buffer time between meetings.
+  • Optionally restrict suggestions to a candidate time window.
+  • Return chronologically ordered appointment slots that satisfy all constraints.
+
+The system must ensure that:
+  • Suggested slots fall within working hours.
+  • Suggested slots do not overlap busy intervals.
+  • Buffer time is respected when evaluating availability.
+  • Output ordering is deterministic under identical inputs.
+
+The module must preserve the following invariants:
+  • Returned slots must be at least as long as the required duration.
+  • No returned slot may violate buffer constraints.
+  • The returned list must reflect the current system state.
+
+The system must correctly handle non-trivial scenarios such as:
+  • Adjacent busy intervals.
+  • Very small gaps between meetings.
+  • Buffers eliminating otherwise valid availability.
+  • Overlapping or unsorted busy intervals.
+  • A meeting duration longer than any available gap.
+  • No availability within the working window.
+
+Output:
+  The output consists of the next N valid appointment suggestions in chronological order.
+  Behavior must be deterministic under ties (if any).
+
+See the lab handout for full requirements.
+"""
+
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta, time
+from typing import List, Optional, Tuple
+
+
+# ---------------- Data Models ----------------
+
+@dataclass(frozen=True)
+class TimeWindow:
+    """
+    A daily time window.
+    Assumption (unless stated otherwise in handout): non-wrapping window where start < end.
+    """
+    start: time
+    end: time
+
+
+@dataclass(frozen=True)
+class BusyInterval:
+    """
+    A busy interval on the given day.
+    Invariant: start < end
+    """
+    start: time
+    end: time
+
+
+@dataclass(frozen=True)
+class Slot:
+    """
+    A recommended appointment slot.
+
+    start_time is a time-of-day within the working window.
+    Deterministic ordering: sort by start_time ascending.
+    """
+    start_time: time
+
+
+class InfeasibleSchedule(Exception):
+    """Raised when no valid slots can be produced (if required by handout)."""
+    pass
+
+
+# ---------------- Core Function ----------------
+
+def suggest_slots(
+    day: date,
+    working_hours: TimeWindow,
+    busy_intervals: List[BusyInterval],
+    duration: timedelta,
+    n: int,
+    buffer: timedelta = timedelta(0),
+    candidate_window: Optional[TimeWindow] = None
+) -> List[Slot]:
+    """
+    Suggest up to the next n valid appointment slots (start times) for the given day.
+
+    Args:
+        day: the calendar day for which to suggest slots.
+        working_hours: the allowed working window for meetings (start < end).
+        busy_intervals: list of busy time intervals (may be overlapping / unsorted).
+        duration: required meeting length (must be > 0).
+        n: maximum number of slot suggestions to return (n >= 0).
+        buffer: optional buffer time required between meetings (buffer >= 0).
+        candidate_window: optional extra restriction on suggestions (must lie within this window too).
+
+    Returns:
+        A list of Slot objects, sorted by start_time ascending, deterministic under identical inputs.
+        If no suitable time slots are available, return an empty list.
+
+    Notes:
+        - Suggested slots must fall within working_hours (and candidate_window if provided).
+        - Suggested slots must not overlap busy_intervals, considering buffer time.
+        - You are free to choose internal representation; inputs use time-of-day.
+        - See lab handout for required slot granularity (e.g., 5-min/15-min steps), if any.
+    """
+
+    ##################################################################
+    # TODO: Implement as per lab handout requirements and constraints.
+    ##################################################################
+    
+    raise NotImplementedError("suggest_slots has not been implemented yet")}
+Response #3: {Below is a **complete deterministic implementation** that follows all the clarified rules:
+
+* slot length = `duration`
+* intervals treated as **[start, end)**
+* buffer applied **before and after busy intervals**
+* busy intervals **sorted, merged, normalized**
+* intervals **clipped to working hours**
+* candidate window must be **within working hours**
+* slot advancement = **previous slot end**
+* multiple slots per gap until **n reached**
+* **deterministic ordering**
+* **n = 0 returns []**
+* handles **unsorted / overlapping busy intervals**
+
+---
+
+```python
+## Student Name:
+## Student ID:
+
+"""
+Task A: Appointment Timeslot Recommender (Stub)
+
+In this lab, you will design and implement an Appointment Slot Recommender using an LLM assistant
+as your primary programming collaborator.
+
+You are asked to implement a Python module that recommends available meeting slots within a
+defined working window.
+
+The system must:
+  • Accept working hours (start and end time).
+  • Accept a list of existing busy intervals.
+  • Accept a required meeting duration.
+  • Accept an optional buffer time between meetings.
+  • Optionally restrict suggestions to a candidate time window.
+  • Return chronologically ordered appointment slots that satisfy all constraints.
+
+The system must ensure that:
+  • Suggested slots fall within working hours.
+  • Suggested slots do not overlap busy intervals.
+  • Buffer time is respected when evaluating availability.
+  • Output ordering is deterministic under identical inputs.
+
+The module must preserve the following invariants:
+  • Returned slots must be at least as long as the required duration.
+  • No returned slot may violate buffer constraints.
+  • The returned list must reflect the current system state.
+
+The system must correctly handle non-trivial scenarios such as:
+  • Adjacent busy intervals.
+  • Very small gaps between meetings.
+  • Buffers eliminating otherwise valid availability.
+  • Overlapping or unsorted busy intervals.
+  • A meeting duration longer than any available gap.
+  • No availability within the working window.
+
+Output:
+  The output consists of the next N valid appointment suggestions in chronological order.
+  Behavior must be deterministic under ties (if any).
+
+See the lab handout for full requirements.
+"""
+
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta, time
+from typing import List, Optional, Tuple
+
+
+# ---------------- Data Models ----------------
+
+@dataclass(frozen=True)
+class TimeWindow:
+    """
+    A daily time window.
+    Assumption (unless stated otherwise in handout): non-wrapping window where start < end.
+    """
+    start: time
+    end: time
+
+
+@dataclass(frozen=True)
+class BusyInterval:
+    """
+    A busy interval on the given day.
+    Invariant: start < end
+    """
+    start: time
+    end: time
+
+
+@dataclass(frozen=True)
+class Slot:
+    """
+    A recommended appointment slot.
+
+    start_time is a time-of-day within the working window.
+    Deterministic ordering: sort by start_time ascending.
+    """
+    start_time: time
+
+
+class InfeasibleSchedule(Exception):
+    """Raised when no valid slots can be produced (if required by handout)."""
+    pass
+
+
+# ---------------- Helper Functions ----------------
+
+def _to_datetime(day: date, t: time) -> datetime:
+    return datetime.combine(day, t)
+
+
+def _merge_intervals(intervals: List[Tuple[datetime, datetime]]) -> List[Tuple[datetime, datetime]]:
+    """Merge overlapping or adjacent intervals."""
+    if not intervals:
+        return []
+
+    intervals.sort(key=lambda x: x[0])
+    merged = [intervals[0]]
+
+    for start, end in intervals[1:]:
+        last_start, last_end = merged[-1]
+
+        if start <= last_end:
+            merged[-1] = (last_start, max(last_end, end))
+        else:
+            merged.append((start, end))
+
+    return merged
+
+
+def _clip_interval(start: datetime, end: datetime, low: datetime, high: datetime):
+    """Clip interval to bounds."""
+    start = max(start, low)
+    end = min(end, high)
+
+    if start >= end:
+        return None
+
+    return (start, end)
+
+
+# ---------------- Core Function ----------------
+
+def suggest_slots(
+    day: date,
+    working_hours: TimeWindow,
+    busy_intervals: List[BusyInterval],
+    duration: timedelta,
+    n: int,
+    buffer: timedelta = timedelta(0),
+    candidate_window: Optional[TimeWindow] = None
+) -> List[Slot]:
+    """
+    Suggest up to the next n valid appointment slots (start times) for the given day.
+    """
+
+    # ---------------- Validation ----------------
+
+    if duration <= timedelta(0):
+        raise ValueError("duration must be positive")
+
+    if buffer < timedelta(0):
+        raise ValueError("buffer must be non-negative")
+
+    if n < 0:
+        raise ValueError("n must be >= 0")
+
+    if working_hours.start >= working_hours.end:
+        raise ValueError("working_hours must satisfy start < end")
+
+    if n == 0:
+        return []
+
+    working_start = _to_datetime(day, working_hours.start)
+    working_end = _to_datetime(day, working_hours.end)
+
+    if duration > (working_end - working_start):
+        return []
+
+    # candidate window validation
+    if candidate_window is not None:
+        if candidate_window.start >= candidate_window.end:
+            raise ValueError("candidate_window must satisfy start < end")
+
+        if candidate_window.start < working_hours.start or candidate_window.end > working_hours.end:
+            raise ValueError("candidate_window must lie within working_hours")
+
+        working_start = _to_datetime(day, candidate_window.start)
+        working_end = _to_datetime(day, candidate_window.end)
+
+    # ---------------- Normalize Busy Intervals ----------------
+
+    normalized = []
+
+    for b in busy_intervals:
+
+        if b.start >= b.end:
+            raise ValueError("BusyInterval must satisfy start < end")
+
+        start = _to_datetime(day, b.start)
+        end = _to_datetime(day, b.end)
+
+        clipped = _clip_interval(start, end, working_start, working_end)
+
+        if clipped:
+            normalized.append(clipped)
+
+    # ---------------- Apply Buffer ----------------
+
+    buffered = []
+
+    for start, end in normalized:
+        buffered_start = start - buffer
+        buffered_end = end + buffer
+
+        clipped = _clip_interval(buffered_start, buffered_end, working_start, working_end)
+
+        if clipped:
+            buffered.append(clipped)
+
+    # ---------------- Merge Intervals ----------------
+
+    merged_busy = _merge_intervals(buffered)
+
+    # ---------------- Compute Free Gaps ----------------
+
+    free_gaps = []
+
+    cursor = working_start
+
+    for start, end in merged_busy:
+
+        if cursor < start:
+            free_gaps.append((cursor, start))
+
+        cursor = max(cursor, end)
+
+    if cursor < working_end:
+        free_gaps.append((cursor, working_end))
+
+    # ---------------- Generate Slots ----------------
+
+    slots: List[Slot] = []
+
+    for gap_start, gap_end in free_gaps:
+
+        slot_start = gap_start
+
+        while slot_start + duration <= gap_end:
+
+            slots.append(Slot(start_time=slot_start.time()))
+
+            if len(slots) == n:
+                return slots
+
+            slot_start += duration
+
+    return slots
+```
+}
+--------------------------------------------------
+
+Prompt #4: {}
+Response #4: {}
+--------------------------------------------------
+
+Prompt #5: {}
+Response #5: {}
 --------------------------------------------------

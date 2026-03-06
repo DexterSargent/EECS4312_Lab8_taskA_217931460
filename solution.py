@@ -1,5 +1,5 @@
-## Student Name:
-## Student ID:
+## Student Name: Dexter Sargent
+## Student ID: 217931460
 
 """
 Task A: Appointment Timeslot Recommender (Stub)
@@ -87,6 +87,42 @@ class InfeasibleSchedule(Exception):
     pass
 
 
+# ---------------- Helper Functions ----------------
+
+def _to_datetime(day: date, t: time) -> datetime:
+    return datetime.combine(day, t)
+
+
+def _merge_intervals(intervals: List[Tuple[datetime, datetime]]) -> List[Tuple[datetime, datetime]]:
+    """Merge overlapping or adjacent intervals."""
+    if not intervals:
+        return []
+
+    intervals.sort(key=lambda x: x[0])
+    merged = [intervals[0]]
+
+    for start, end in intervals[1:]:
+        last_start, last_end = merged[-1]
+
+        if start <= last_end:
+            merged[-1] = (last_start, max(last_end, end))
+        else:
+            merged.append((start, end))
+
+    return merged
+
+
+def _clip_interval(start: datetime, end: datetime, low: datetime, high: datetime):
+    """Clip interval to bounds."""
+    start = max(start, low)
+    end = min(end, high)
+
+    if start >= end:
+        return None
+
+    return (start, end)
+
+
 # ---------------- Core Function ----------------
 
 def suggest_slots(
@@ -100,29 +136,107 @@ def suggest_slots(
 ) -> List[Slot]:
     """
     Suggest up to the next n valid appointment slots (start times) for the given day.
-
-    Args:
-        day: the calendar day for which to suggest slots.
-        working_hours: the allowed working window for meetings (start < end).
-        busy_intervals: list of busy time intervals (may be overlapping / unsorted).
-        duration: required meeting length (must be > 0).
-        n: maximum number of slot suggestions to return (n >= 0).
-        buffer: optional buffer time required between meetings (buffer >= 0).
-        candidate_window: optional extra restriction on suggestions (must lie within this window too).
-
-    Returns:
-        A list of Slot objects, sorted by start_time ascending, deterministic under identical inputs.
-        If no suitable time slots are available, return an empty list.
-
-    Notes:
-        - Suggested slots must fall within working_hours (and candidate_window if provided).
-        - Suggested slots must not overlap busy_intervals, considering buffer time.
-        - You are free to choose internal representation; inputs use time-of-day.
-        - See lab handout for required slot granularity (e.g., 5-min/15-min steps), if any.
     """
 
-    ##################################################################
-    # TODO: Implement as per lab handout requirements and constraints.
-    ##################################################################
-    
-    raise NotImplementedError("suggest_slots has not been implemented yet")
+    # ---------------- Validation ----------------
+
+    if duration <= timedelta(0):
+        raise ValueError("duration must be positive")
+
+    if buffer < timedelta(0):
+        raise ValueError("buffer must be non-negative")
+
+    if n < 0:
+        raise ValueError("n must be >= 0")
+
+    if working_hours.start >= working_hours.end:
+        raise ValueError("working_hours must satisfy start < end")
+
+    if n == 0:
+        return []
+
+    working_start = _to_datetime(day, working_hours.start)
+    working_end = _to_datetime(day, working_hours.end)
+
+    if duration > (working_end - working_start):
+        return []
+
+    # candidate window validation
+    if candidate_window is not None:
+        if candidate_window.start >= candidate_window.end:
+            raise ValueError("candidate_window must satisfy start < end")
+
+        if candidate_window.start < working_hours.start or candidate_window.end > working_hours.end:
+            raise ValueError("candidate_window must lie within working_hours")
+
+        working_start = _to_datetime(day, candidate_window.start)
+        working_end = _to_datetime(day, candidate_window.end)
+
+    # ---------------- Normalize Busy Intervals ----------------
+
+    normalized = []
+
+    for b in busy_intervals:
+
+        if b.start >= b.end:
+            raise ValueError("BusyInterval must satisfy start < end")
+
+        start = _to_datetime(day, b.start)
+        end = _to_datetime(day, b.end)
+
+        clipped = _clip_interval(start, end, working_start, working_end)
+
+        if clipped:
+            normalized.append(clipped)
+
+    # ---------------- Apply Buffer ----------------
+
+    buffered = []
+
+    for start, end in normalized:
+        buffered_start = start - buffer
+        buffered_end = end + buffer
+
+        clipped = _clip_interval(buffered_start, buffered_end, working_start, working_end)
+
+        if clipped:
+            buffered.append(clipped)
+
+    # ---------------- Merge Intervals ----------------
+
+    merged_busy = _merge_intervals(buffered)
+
+    # ---------------- Compute Free Gaps ----------------
+
+    free_gaps = []
+
+    cursor = working_start
+
+    for start, end in merged_busy:
+
+        if cursor < start:
+            free_gaps.append((cursor, start))
+
+        cursor = max(cursor, end)
+
+    if cursor < working_end:
+        free_gaps.append((cursor, working_end))
+
+    # ---------------- Generate Slots ----------------
+
+    slots: List[Slot] = []
+
+    for gap_start, gap_end in free_gaps:
+
+        slot_start = gap_start
+
+        while slot_start + duration <= gap_end:
+
+            slots.append(Slot(start_time=slot_start.time()))
+
+            if len(slots) == n:
+                return slots
+
+            slot_start += duration
+
+    return slots
