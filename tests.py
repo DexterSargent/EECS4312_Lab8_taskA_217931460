@@ -179,3 +179,191 @@ def test_a5_buffer_eliminates_small_gaps():
 #################################################################################
 # Add your own additional tests here to cover more cases and edge cases as needed.
 #################################################################################
+
+# -------------------------------------------------------------
+# Additional Tests Covering Acceptance Criteria and Edge Cases
+# -------------------------------------------------------------
+
+
+def test_ac1_validate_working_hours_boundary():
+    """
+    AC1: All slots must stay within working hours.
+    """
+    day = date(2026, 2, 24)
+    working = TimeWindow(time(9, 0), time(12, 0))
+    duration = timedelta(minutes=30)
+
+    out = suggest_slots(
+        day=day,
+        working_hours=working,
+        busy_intervals=[],
+        duration=duration,
+        n=5,
+        buffer=timedelta(0),
+        candidate_window=None
+    )
+
+    assert_slots_basic_constraints(out, day, working, [], duration, 5, timedelta(0), None)
+
+    for s in out:
+        assert s.start_time >= time(9, 0)
+        end_time = (combine(day, s.start_time) + duration).time()
+        assert end_time <= time(12, 0)
+
+
+def test_ac2_avoid_busy_intervals():
+    """
+    AC2: No slot may overlap a busy interval.
+    """
+    day = date(2026, 2, 24)
+
+    working = TimeWindow(time(9, 0), time(17, 0))
+    busy = [BusyInterval(time(10, 0), time(11, 0))]
+    duration = timedelta(minutes=30)
+
+    out = suggest_slots(
+        day, working, busy, duration, n=10, buffer=timedelta(0), candidate_window=None
+    )
+
+    assert_slots_basic_constraints(out, day, working, busy, duration, 10, timedelta(0), None)
+
+    for s in out:
+        assert not (time(9, 31) <= s.start_time <= time(10, 59))
+
+
+def test_ac3_insufficient_availability_returns_empty():
+    """
+    AC3: Meeting longer than available window -> empty list.
+    """
+    day = date(2026, 2, 24)
+
+    working = TimeWindow(time(9, 0), time(10, 0))
+    duration = timedelta(minutes=90)
+
+    out = suggest_slots(
+        day, working, [], duration, n=5, buffer=timedelta(0), candidate_window=None
+    )
+
+    assert out == []
+
+
+def test_ac4_respect_buffer_after_busy():
+    """
+    AC4: Buffer must push earliest slot after busy interval.
+    """
+    day = date(2026, 2, 24)
+
+    working = TimeWindow(time(9, 0), time(12, 0))
+    busy = [BusyInterval(time(9, 30), time(10, 0))]
+
+    duration = timedelta(minutes=30)
+    buffer = timedelta(minutes=10)
+
+    out = suggest_slots(
+        day, working, busy, duration, n=5, buffer=buffer, candidate_window=None
+    )
+
+    assert_slots_basic_constraints(out, day, working, busy, duration, 5, buffer, None)
+
+    if out:
+        assert out[0].start_time >= time(10, 10)
+
+
+def test_ac6_deterministic_and_limit_n():
+    """
+    AC6: deterministic output and respecting n.
+    """
+    day = date(2026, 2, 24)
+
+    working = TimeWindow(time(9, 0), time(17, 0))
+    busy = [
+        BusyInterval(time(10, 0), time(10, 30)),
+        BusyInterval(time(12, 0), time(13, 0)),
+    ]
+
+    duration = timedelta(minutes=30)
+
+    out1 = suggest_slots(day, working, busy, duration, n=2)
+    out2 = suggest_slots(day, working, busy, duration, n=2)
+
+    assert len(out1) <= 2
+    assert [s.start_time for s in out1] == [s.start_time for s in out2]
+
+
+def test_ec1_zero_available_slots():
+    """
+    EC1: Busy intervals fill entire window.
+    """
+    day = date(2026, 2, 24)
+
+    working = TimeWindow(time(9, 0), time(12, 0))
+    busy = [BusyInterval(time(9, 0), time(12, 0))]
+
+    duration = timedelta(minutes=30)
+
+    out = suggest_slots(
+        day, working, busy, duration, n=5
+    )
+
+    assert out == []
+
+
+def test_ec2_n_equals_zero_returns_empty():
+    """
+    EC2: n=0 must return [].
+    """
+    day = date(2026, 2, 24)
+
+    working = TimeWindow(time(9, 0), time(17, 0))
+
+    out = suggest_slots(
+        day,
+        working,
+        busy_intervals=[],
+        duration=timedelta(minutes=30),
+        n=0
+    )
+
+    assert out == []
+
+
+def test_ec3_adjacent_busy_intervals_no_gap():
+    """
+    EC3: Adjacent intervals must not allow a slot at boundary.
+    """
+    day = date(2026, 2, 24)
+
+    working = TimeWindow(time(9, 0), time(12, 0))
+
+    busy = [
+        BusyInterval(time(9, 0), time(10, 0)),
+        BusyInterval(time(10, 0), time(11, 0)),
+    ]
+
+    duration = timedelta(minutes=30)
+
+    out = suggest_slots(day, working, busy, duration, n=10)
+
+    assert_slots_basic_constraints(out, day, working, busy, duration, 10, timedelta(0), None)
+
+    assert all(s.start_time >= time(11, 0) for s in out)
+
+
+def test_ec6_candidate_window_outside_working_hours():
+    """
+    EC6: candidate window outside working hours should raise error.
+    """
+    day = date(2026, 2, 24)
+
+    working = TimeWindow(time(9, 0), time(17, 0))
+    candidate = TimeWindow(time(8, 0), time(10, 0))
+
+    with pytest.raises(ValueError):
+        suggest_slots(
+            day,
+            working,
+            [],
+            duration=timedelta(minutes=30),
+            n=5,
+            candidate_window=candidate
+        )
