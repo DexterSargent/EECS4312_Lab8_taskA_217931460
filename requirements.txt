@@ -90,12 +90,37 @@ FR14 -> C1 -> AC3
 FR15 -> C3 -> AC2
 
 8. Revision Notes
-The following revisions were made to improve clarity, correctness, and completeness while preserving the original structure:
+Revision Note 1
+Requirement updated: C2 - Limit output suggestions
+Reason: During requirement review the wording "exactly N suggestions" conflicted with Acceptance Criterion AC5, which allows returning fewer than N slots when insufficient availability exists.
+Action: Updated wording to "at most N suggestions" to ensure consistency with system behavior and acceptance criteria.
 
-- Corrected C2 wording from "exactly N suggestions" to "at most N suggestions" to align with AC5.
-- Added Assumption A5 which was accidentally deleted prior to last commit.
-- Added FR14 to define deterministic slot generation granularity (1-minute resolution).
-- Added FR15 to explicitly define boundary-touching behavior between slots and busy intervals.
-- Added EC7 to define behavior when meeting duration equals the available time window.
-- Adjusted traceability mappings to include newly added functional requirements.
-- Ensured consistent terminology between constraints, functional requirements, and acceptance criteria.
+Revision Note 2
+Requirement updated: A5 = Candidate window handling assumption
+Reason: During requirement review it was identified that Assumption A5 had been unintentionally removed in a previous revision, creating ambiguity regarding how candidate windows partially outside working hours should be handled.
+Action: Reintroduced Assumption A5 to clarify that partially overlapping candidate windows are clipped to the working window before processing.
+
+Revision Note 3
+Requirement updated: FR14 = Slot generation granularity
+Reason: The LLM review identified missing constraints regarding how candidate slot start times are generated, which could lead to inconsistent implementations.
+Action: Added FR14 to define deterministic slot generation using a minimum resolution of one minute.
+
+Revision Note 4
+Requirement updated: FR15 = Slot boundary interaction with busy intervals
+Reason: Requirement review identified ambiguity regarding whether meeting slots could touch the boundary of busy intervals without overlapping.
+Action: Added FR15 to explicitly allow slot boundaries to touch busy interval boundaries provided no overlap occurs.
+
+Revision Note 5
+Requirement updated: EC7 = Meeting duration equal to available window
+Reason: Edge case analysis revealed missing system behavior when the requested meeting duration exactly equals the available time window.
+Action: Added EC7 to define expected system behavior for this scenario.
+
+Revision Note 6
+Requirement updated: Section 7 = Traceability mappings
+Reason: The addition of new functional requirements introduced gaps in requirement traceability.
+Action: Updated traceability mappings to include FR14 and FR15.
+
+Revision Note 7
+Requirement updated: Multiple sections = Terminology consistency
+Reason: Requirement review identified minor inconsistencies in terminology between functional requirements, constraints, and acceptance criteria.
+Action: Standardized terminology to ensure consistent references to slots, windows, and constraints across the document.
