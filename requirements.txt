@@ -1,0 +1,101 @@
+1. Problem Understanding 
+System purpose: To provide a user with the next N available appointment times within a set of constraints, navigating conflicts (overlaps, buffers, and windows) intelligently to provide deterministic outputs.
+Inputs to the system: day (date), working_hours (TimeWindow), busy_intervals (List[BusyInterval]), duration (timedelta), n (int), buffer (timedelta), and candidate_window (TimeWindow).
+Outputs produced by the system: A chronologically ordered list of up to N valid Slot objects containing start times.
+Primary goal of the system: To automate the identification of available meeting slots while adhering to persona-based constraints for predictability, conciseness, and transparency.
+
+2. Assumptions
+A1: Input data types (date, time, timedelta, int) are validated before logic execution.
+A2: Working hours are restricted to a single calendar day and do not wrap around midnight.
+A3: Busy intervals provided for the day are contained within that 24-hour period.
+A4: Meeting duration remains constant for all suggestions generated in a single request.
+A5: The system treats time as discrete at the minute level for boundary calculations.
+A6: The user environment allows for raising exceptions (ValueErrors) for invalid state configurations.
+
+3. Functional Requirements
+FR1: The system shall adhere to a defined daily working window consisting of a specific start and end time.
+FR2: The system shall ensure that no recommended slots overlap with defined busy intervals.
+FR3: The system shall process and normalize busy intervals regardless of chronological order or overlapping time frames.
+FR4: The system shall produce a deterministic ordering of appointment slots when identical inputs are provided.
+FR5: The system shall accept a required meeting duration and ensure all returned slots are exactly equal to that duration.
+FR6: The system shall apply an optional buffer time both before and after busy intervals during availability evaluation.
+FR7: The system shall support optional candidate windows to restrict results within the broader working hours.
+FR8: The system shall return no more than 'n' valid suggestions as specified by the user.
+FR9: The system shall provide a configurable notification/dialogue level (concise vs. verbose).
+FR10: The system shall automatically resolve scheduling conflicts without manual user intervention.
+FR11: The system shall maintain a reviewable log of automated decisions.
+FR12: The system shall explicitly catch processing errors and notify the user in plain language when in verbose mode.
+FR13: The system shall output an empty list if no valid time slots are found under the given constraints.
+FR14: The system shall generate candidate slot start times in deterministic chronological increments (minimum resolution of one minute).
+FR15: The system shall allow slot boundaries to exactly touch busy interval boundaries provided no overlap exists.
+
+4. System Constraints
+C1: Deterministic ordering of slots (sorted by start_time ascending).
+Derived from persona attribute: Jane - Needs predictable and stable ordering; Mo - Needs deterministic behavior.
+C2: Limit output to exactly N suggestions. 
+Derived from persona attribute: Jane - Prefers concise outputs and minimal information overload.
+C3: Automatic resolution of scheduling conflicts (merging/normalization).
+Derived from persona attribute: Jane - Trusts the system to resolve conflicts automatically without manual oversight.
+C4: Explicit handling of boundary/processing errors in plain language.
+Derived from persona attribute: Mo - Experiences stress when outcomes appear arbitrary; requires clear explanations.
+C5: Provision of an optional buffer time between meetings.
+Derived from persona attribute: Mo - Performs frequent updates (snoozing/cancelling) necessitating gaps for flexibility.
+C6: Restriction of availability within specific candidate windows.
+Derived from persona attribute: Jane - Busy professional managing specific daily routines and automation.
+
+5. Acceptance Criteria
+AC1: All returned slots must have a start_time >= working_start and (start_time + duration) <= working_end.
+AC2: No returned slot start_time may fall within any busy interval or its associated buffer period.
+AC3: When identical inputs are provided, the system must return the exact same list of slots in the same order
+AC4: If a candidate window is provided, the system must only return slots that fit entirely within the intersection of working hours and that window.
+AC5: The system must return exactly N slots if they exist, or the maximum available number if fewer than N exist.
+AC6: If no valid slots exist, the system must return an empty list [] instead of failing or suggesting overlaps.
+AC7: If the system is provided with an invalid input it must raise a ValueError with a descriptive, plain-language message.
+AC8: The system must maintain a record of automated decisions identifying the specific constraint that triggered a slot exclusion (e.g., "Slot at 10:00 excluded due to 10-minute buffer").
+
+
+
+6. Edge Cases
+EC1: Zero Available Slots.
+Expected system behavior: Return an empty list [].
+EC2: Candidate Window Exactly Matching Meeting Duration.
+Expected system behavior: Return exactly one slot if no busy/buffer conflicts exist in that minute-perfect window.
+EC3: Adjacent Busy Intervals with No Gap.
+Expected system behavior: Normalize the two intervals into a single continuous block and suggest no slots during the boundary minute.
+EC4: Buffer Eliminating a Marginal Gap.
+Expected system behavior: The slot is excluded from the results.
+EC5: Overlapping or Unsorted Busy Intervals
+Expected system behavior: Intervals are normalized and merged before availability is calculated.
+EC6: Candidate Window Outside Working Hours.
+Expected system behavior: Clip candidate window to fit within working hours, or raise ValueError if completely outside working hours
+EC7: Meeting Duration Equal to the Entire Available Window.
+Expected system behavior: Return exactly one slot if the duration exactly matches the available time range and no conflicts exist.
+
+
+7. Traceability
+FR1 -> C6 -> AC1, AC4
+FR2 -> C3, C5 -> AC2, EC3, EC4, EC5
+FR3 -> C3 -> AC2, EC5
+FR4 -> C1 -> AC3, AC5
+FR5 -> AC1, AC6, EC7
+FR6 -> C5 -> AC2, EC4
+FR7 -> C6 -> AC4, EC6, EC7
+FR8 -> C2 -> AC5, EC2
+FR9 -> C4 -> AC7
+FR10 -> C3 -> EC3, EC5
+FR11 -> C4 -> AC8
+FR12 -> C4 -> AC7
+FR13 -> AC6, EC1
+FR14 -> C1 -> AC3
+FR15 -> C3 -> AC2
+
+8. Revision Notes
+The following revisions were made to improve clarity, correctness, and completeness while preserving the original structure:
+
+- Corrected C2 wording from "exactly N suggestions" to "at most N suggestions" to align with AC5.
+- Added Assumption A5 which was accidentally deleted prior to last commit.
+- Added FR14 to define deterministic slot generation granularity (1-minute resolution).
+- Added FR15 to explicitly define boundary-touching behavior between slots and busy intervals.
+- Added EC7 to define behavior when meeting duration equals the available time window.
+- Adjusted traceability mappings to include newly added functional requirements.
+- Ensured consistent terminology between constraints, functional requirements, and acceptance criteria.
